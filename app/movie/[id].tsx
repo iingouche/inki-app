@@ -11,15 +11,12 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Movie, Showtime } from '@/types';
+import { Movie } from '@/types';
 import { moviesAPI } from '@/services/api';
 import {
   ArrowLeft,
-  Star,
-  Clock,
-  Calendar,
-  ShoppingCart,
 } from 'lucide-react-native';
+import { Linking } from 'react-native';
 
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -46,25 +43,17 @@ export default function MovieDetailScreen() {
     }
   };
 
-  const handleBuyTicket = (showtime: Showtime) => {
-    if (!showtime.available) {
-      Alert.alert('Недоступно', 'Все билеты на этот сеанс распроданы');
+  const handleOpenVideo = async () => {
+    if (!movie?.videoUrl) {
+      Alert.alert('Видео недоступно', 'Ссылка на видео отсутствует');
       return;
     }
 
-    Alert.alert(
-      'Покупка билета',
-      `Вы хотите купить билет на фильм "${movie?.title}"?\n\nВремя: ${showtime.time}\nЗал: ${showtime.hall}`,
-      [
-        { text: 'Отмена', style: 'cancel' },
-        {
-          text: 'Купить',
-          onPress: () => {
-            Alert.alert('Успех', 'Билет успешно куплен!');
-          },
-        },
-      ]
-    );
+    try {
+      await Linking.openURL(movie.videoUrl);
+    } catch (error) {
+      Alert.alert('Ошибка', 'Не удалось открыть видео');
+    }
   };
 
   if (isLoading) {
@@ -88,7 +77,12 @@ export default function MovieDetailScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.imageContainer}>
-          <Image source={{ uri: movie.poster }} style={styles.poster} />
+          <Image
+            source={{
+              uri: movie.previewImage || 'https://via.placeholder.com/600x900',
+            }}
+            style={styles.poster}
+          />
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
@@ -102,23 +96,18 @@ export default function MovieDetailScreen() {
 
           <View style={styles.metaContainer}>
             <View style={styles.metaItem}>
-              <Star size={18} color="#FFD700" fill="#FFD700" strokeWidth={2} />
-              <Text style={styles.metaText}>{movie.rating.toFixed(1)}</Text>
+              <Text style={styles.metaText}>
+                {typeof movie.price === 'number' && movie.price > 0
+                  ? `Цена: ${movie.price} ₽`
+                  : 'Бесплатно'}
+              </Text>
             </View>
             <View style={styles.separator} />
             <View style={styles.metaItem}>
-              <Calendar size={18} color="#999" strokeWidth={2} />
-              <Text style={styles.metaText}>{movie.year}</Text>
+              <Text style={styles.metaText}>
+                {movie.isPaid ? 'Платный доступ' : 'Свободный доступ'}
+              </Text>
             </View>
-            <View style={styles.separator} />
-            <View style={styles.metaItem}>
-              <Clock size={18} color="#999" strokeWidth={2} />
-              <Text style={styles.metaText}>{movie.duration} мин</Text>
-            </View>
-          </View>
-
-          <View style={styles.genreContainer}>
-            <Text style={styles.genreBadge}>{movie.genre}</Text>
           </View>
 
           <View style={styles.section}>
@@ -127,46 +116,24 @@ export default function MovieDetailScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Расписание сеансов</Text>
-            {movie.showtimes.map((showtime) => (
-              <View
-                key={showtime.id}
+            <Text style={styles.sectionTitle}>Видео</Text>
+            <TouchableOpacity
+              style={[
+                styles.videoButton,
+                !movie.videoUrl && styles.videoButtonDisabled,
+              ]}
+              onPress={handleOpenVideo}
+              disabled={!movie.videoUrl}
+            >
+              <Text
                 style={[
-                  styles.showtimeCard,
-                  !showtime.available && styles.showtimeDisabled,
+                  styles.videoButtonText,
+                  !movie.videoUrl && styles.videoButtonTextDisabled,
                 ]}
               >
-                <View style={styles.showtimeInfo}>
-                  <Text style={styles.showtimeTime}>{showtime.time}</Text>
-                  <Text style={styles.showtimeHall}>{showtime.hall}</Text>
-                  {!showtime.available && (
-                    <Text style={styles.soldOut}>Продано</Text>
-                  )}
-                </View>
-                <TouchableOpacity
-                  style={[
-                    styles.buyButton,
-                    !showtime.available && styles.buyButtonDisabled,
-                  ]}
-                  onPress={() => handleBuyTicket(showtime)}
-                  disabled={!showtime.available}
-                >
-                  <ShoppingCart
-                    size={18}
-                    color={showtime.available ? '#fff' : '#666'}
-                    strokeWidth={2}
-                  />
-                  <Text
-                    style={[
-                      styles.buyButtonText,
-                      !showtime.available && styles.buyButtonTextDisabled,
-                    ]}
-                  >
-                    Купить
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+                {movie.videoUrl ? 'Открыть видео' : 'Видео не загружено'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -244,19 +211,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#333',
     marginHorizontal: 12,
   },
-  genreContainer: {
-    flexDirection: 'row',
-    marginBottom: 24,
-  },
-  genreBadge: {
-    backgroundColor: '#E50914',
-    color: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    fontSize: 12,
-    fontWeight: '600',
-  },
   section: {
     marginBottom: 24,
   },
@@ -271,57 +225,23 @@ const styles = StyleSheet.create({
     color: '#ccc',
     lineHeight: 24,
   },
-  showtimeCard: {
-    backgroundColor: '#111',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#222',
-  },
-  showtimeDisabled: {
-    opacity: 0.5,
-  },
-  showtimeInfo: {
-    flex: 1,
-  },
-  showtimeTime: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  showtimeHall: {
-    fontSize: 14,
-    color: '#999',
-  },
-  soldOut: {
-    fontSize: 12,
-    color: '#E50914',
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  buyButton: {
+  videoButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     backgroundColor: '#E50914',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
   },
-  buyButtonDisabled: {
+  videoButtonDisabled: {
     backgroundColor: '#333',
   },
-  buyButtonText: {
+  videoButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
   },
-  buyButtonTextDisabled: {
+  videoButtonTextDisabled: {
     color: '#666',
   },
 });

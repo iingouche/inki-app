@@ -1,4 +1,6 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import {
   User,
   Movie,
@@ -7,9 +9,10 @@ import {
   LoginCredentials,
   RegisterCredentials,
 } from '@/types';
-import { MOCK_USER, MOCK_MOVIES, MOCK_TICKETS } from '@/data/mockData';
+import { MOCK_USER, MOCK_TICKETS } from '@/data/mockData';
 
-const API_BASE_URL = process.env.HOST;
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL || process.env.HOST || '';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -30,25 +33,28 @@ export const setAuthToken = (token: string | null) => {
   }
 };
 
+const persistToken = async (token: string | null) => {
+  if (token) {
+    await AsyncStorage.setItem('token', token);
+  } else {
+    await AsyncStorage.removeItem('token');
+  }
+};
+
 export const authAPI = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+      const response = await api.post(`/auth/login`, {
         email: credentials.email,
-        password: credentials.password
+        password: credentials.password,
       });
+
+      if (response.data.token) {
+        await persistToken(response.data.token);
+        setAuthToken(response.data.token);
+      }
+
       return response.data;
-
-      // await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // if (credentials.email && credentials.password) {
-      //   const token = 'mock_token_' + Date.now();
-      //   return {
-      //     token,
-      //     user: MOCK_USER,
-      //   };
-      // }
-      // throw new Error('Неверный email или пароль');
     } catch (error) {
       throw error;
     }
@@ -58,48 +64,75 @@ export const authAPI = {
     credentials: RegisterCredentials
   ): Promise<AuthResponse> => {
     try {
-      // TODO: Раскомментировать для работы с реальным API
-      const response = await axios.post(`${API_BASE_URL}/auth/register`, {
+      if (credentials.password !== credentials.confirmPassword) {
+        throw new Error('Пароли не совпадают');
+      }
+
+      const response = await api.post(`/auth/register`, {
         email: credentials.email,
         password: credentials.password,
-        confirmPassword: credentials.confirmPassword,
         name: credentials.name
       });
+
+      if (response.data.token) {
+        await persistToken(response.data.token);
+        setAuthToken(response.data.token);
+      }
+
       return response.data;
-
-      // await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // if (credentials.password !== credentials.confirmPassword) {
-      //   throw new Error('Пароли не совпадают');
-      // }
-
-      // if (credentials.email && credentials.password && credentials.name) {
-      //   const token = 'mock_token_' + Date.now();
-      //   return {
-      //     token,
-      //     user: {
-      //       ...MOCK_USER,
-      //       email: credentials.email,
-      //       name: credentials.name,
-      //     },
-      //   };
-      // }
-      throw new Error('Заполните все поля');
     } catch (error) {
       throw error;
     }
   },
+  
+  logout: () => {
+    persistToken(null);
+    setAuthToken(null);
+  },
+  
+  checkAuth: async (): Promise<AuthResponse | null> => {
+    const token = await AsyncStorage.getItem('token');
+    if (!token) return null;
+    
+    try {
+      setAuthToken(token);
+      // Здесь можно добавить запрос для проверки токена, если есть соответствующий эндпоинт
+      // const response = await api.get(`/auth/me`);
+      // return response.data;
+      return null;
+    } catch (error) {
+      await persistToken(null);
+      setAuthToken(null);
+      return null;
+    }
+  }
 };
+
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Неавторизован - удаляем токен и перенаправляем на страницу входа
+      persistToken(null);
+      setAuthToken(null);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 
 export const moviesAPI = {
   getNowPlaying: async (): Promise<Movie[]> => {
     try {
       // TODO: Раскомментировать для работы с реальным API
-      const response = await axios.get(`${API_BASE_URL}/movies/now-playing`);
+      const response = await api.get(`/movies`);
       return response.data;
 
       // await new Promise((resolve) => setTimeout(resolve, 800));
-      // return MOCK_MOVIES;
+      // return [];
     } catch (error) {
       throw error;
     }
@@ -108,11 +141,11 @@ export const moviesAPI = {
   getMovieById: async (id: string): Promise<Movie> => {
     try {
       // TODO: Раскомментировать для работы с реальным API
-      const response = await axios.get(`${API_BASE_URL}/movies/${id}`);
+      const response = await api.get(`/movies/${id}`);
       return response.data;
 
       // await new Promise((resolve) => setTimeout(resolve, 600));
-      // const movie = MOCK_MOVIES.find((m) => m.id === id);
+      // const movie = null;
       // if (!movie) {
       //   throw new Error('Фильм не найден');
       // }
@@ -127,10 +160,10 @@ export const userAPI = {
   getProfile: async (): Promise<User> => {
     try {
       // TODO: Раскомментировать для работы с реальным API
-      const response = await axios.get(`${API_BASE_URL}/user/profile`, {
+      const response = await api.get(`/user/profile`, {
         headers: {
-          Authorization: `Bearer ${authToken}`
-        }
+          Authorization: `Bearer ${authToken}`,
+        },
       });
       return response.data;
 
@@ -144,10 +177,10 @@ export const userAPI = {
   getTickets: async (): Promise<Ticket[]> => {
     try {
       // TODO: Раскомментировать для работы с реальным API
-      const response = await axios.get(`${API_BASE_URL}/user/tickets`, {
+      const response = await api.get(`/user/tickets`, {
         headers: {
-          Authorization: `Bearer ${authToken}`
-        }
+          Authorization: `Bearer ${authToken}`,
+        },
       });
       return response.data;
 

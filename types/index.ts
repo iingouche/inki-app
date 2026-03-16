@@ -5,23 +5,38 @@ export interface User {
   avatar?: string;
 }
 
-export interface Movie {
-  id: string;
-  title: string;
-  genre: string;
-  rating: number;
-  poster: string;
-  year: number;
-  duration: number;
-  description: string;
-  showtimes: Showtime[];
+export interface LoginCredentials {
+  email: string;
+  password: string;
 }
 
-export interface Showtime {
-  id: string;
-  time: string;
-  hall: string;
-  available: boolean;
+export interface RegisterCredentials {
+  name: string
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    role: string;
+  };
+}
+
+export interface Movie {
+  _id?: string;
+  id?: string;
+  title: string;
+  description: string;
+  previewImage?: string | null;
+  videoUrl?: string | null;
+  price?: number;
+  isPaid?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Ticket {
@@ -32,19 +47,4 @@ export interface Ticket {
   row: number;
   seat: number;
   poster: string;
-}
-
-export interface AuthResponse {
-  token: string;
-  user: User;
-}
-
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface RegisterCredentials extends LoginCredentials {
-  confirmPassword: string;
-  name: string;
 }

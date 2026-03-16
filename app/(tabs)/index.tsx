@@ -12,7 +12,6 @@ import {
 import { useRouter } from 'expo-router';
 import { Movie } from '@/types';
 import { moviesAPI } from '@/services/api';
-import { Star } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -35,31 +34,43 @@ export default function HomeScreen() {
     }
   };
 
-  const renderMovieCard = ({ item }: { item: Movie }) => (
+  const renderMovieCard = ({ item }: { item: Movie }) => {
+    const movieId = item._id ?? item.id ?? '';
+    const priceLabel =
+      typeof item.price === 'number' && item.price > 0
+        ? `Цена: ${item.price} ₽`
+        : 'Бесплатно';
+
+    return (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => router.push(`/movie/${item.id}`)}
+      onPress={() => movieId && router.push(`/movie/${movieId}`)}
       activeOpacity={0.8}
     >
-      <Image source={{ uri: item.poster }} style={styles.poster} />
+      <Image
+        source={{
+          uri: item.previewImage || 'https://via.placeholder.com/300x450',
+        }}
+        style={styles.poster}
+      />
       <View style={styles.cardContent}>
         <Text style={styles.title} numberOfLines={1}>
           {item.title}
         </Text>
-        <Text style={styles.genre}>{item.genre}</Text>
-        <View style={styles.ratingContainer}>
-          <Star size={16} color="#FFD700" fill="#FFD700" strokeWidth={2} />
-          <Text style={styles.rating}>{item.rating.toFixed(1)}</Text>
-        </View>
+        <Text style={styles.description} numberOfLines={2}>
+          {item.description}
+        </Text>
+        <Text style={styles.price}>{priceLabel}</Text>
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#E50914" />
-        <Text style={styles.loadingText}>Загрузка фильмов...</Text>
+        <Text style={styles.loadingText}>Загрузка ваших фильмов...</Text>
       </View>
     );
   }
@@ -67,16 +78,16 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Сегодня в кино</Text>
+        <Text style={styles.headerTitle}>Все фильмы</Text>
         <Text style={styles.headerSubtitle}>
-          {movies.length} {movies.length === 1 ? 'фильм' : 'фильмов'}
+          {movies.length} {movies.length === 1 ? 'фильм' : 'фильмов'} в вашей коллекции
         </Text>
       </View>
 
       <FlatList
         data={movies}
         renderItem={renderMovieCard}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id ?? item.id ?? item.title}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
@@ -144,19 +155,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 8,
   },
-  genre: {
-    fontSize: 14,
+  description: {
+    fontSize: 13,
     color: '#999',
     marginBottom: 12,
+    lineHeight: 18,
   },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  rating: {
-    fontSize: 16,
+  price: {
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#FFD700',
+    color: '#E50914',
   },
 });

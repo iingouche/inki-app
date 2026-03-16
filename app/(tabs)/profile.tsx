@@ -9,36 +9,46 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { Ticket } from '@/types';
-import { userAPI } from '@/services/api';
-import { LogOut, Mail, Ticket as TicketIcon, Calendar, Clock } from 'lucide-react-native';
+import { Movie } from '@/types';
+import { moviesAPI } from '@/services/api';
+import { Film, LogOut, Mail } from 'lucide-react-native';
 
 export default function ProfileScreen() {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [movies, setMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    loadTickets();
+    loadMovies();
   }, []);
 
-  const loadTickets = async () => {
+  const loadMovies = async () => {
     try {
       setIsLoading(true);
-      const data = await userAPI.getTickets();
-      setTickets(data);
+      const data = await moviesAPI.getNowPlaying();
+      setMovies(data);
     } catch (error) {
-      console.error('Ошибка загрузки билетов:', error);
+      console.error('Ошибка загрузки фильмов:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Вы уверены, что хотите выйти?');
+      if (confirmed) {
+        logout();
+        router.replace('/auth');
+      }
+      return;
+    }
+
     Alert.alert('Выход', 'Вы уверены, что хотите выйти?', [
       { text: 'Отмена', style: 'cancel' },
       {
@@ -52,15 +62,6 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -72,54 +73,59 @@ export default function ProfileScreen() {
           <Text style={styles.name}>{user?.name}</Text>
           <View style={styles.emailContainer}>
             <Mail size={16} color="#999" strokeWidth={2} />
+            <Text>{user?.name}</Text>
             <Text style={styles.email}>{user?.email}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <TicketIcon size={24} color="#E50914" strokeWidth={2} />
-            <Text style={styles.sectionTitle}>Мои билеты</Text>
+            <Film size={24} color="#E50914" strokeWidth={2} />
+            <Text style={styles.sectionTitle}>Фильмы</Text>
           </View>
 
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#E50914" />
             </View>
-          ) : tickets.length === 0 ? (
+          ) : movies.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <TicketIcon size={48} color="#666" strokeWidth={2} />
-              <Text style={styles.emptyText}>У вас пока нет билетов</Text>
+              <Film size={48} color="#666" strokeWidth={2} />
+              <Text style={styles.emptyText}>Фильмы не найдены</Text>
             </View>
           ) : (
-            tickets.map((ticket) => (
-              <View key={ticket.id} style={styles.ticketCard}>
-                <Image
-                  source={{ uri: ticket.poster }}
-                  style={styles.ticketPoster}
-                />
-                <View style={styles.ticketContent}>
-                  <Text style={styles.ticketTitle} numberOfLines={1}>
-                    {ticket.movieTitle}
-                  </Text>
-                  <View style={styles.ticketInfo}>
-                    <View style={styles.ticketRow}>
-                      <Calendar size={14} color="#999" strokeWidth={2} />
-                      <Text style={styles.ticketText}>
-                        {formatDate(ticket.date)}
-                      </Text>
-                    </View>
-                    <View style={styles.ticketRow}>
-                      <Clock size={14} color="#999" strokeWidth={2} />
-                      <Text style={styles.ticketText}>{ticket.time}</Text>
-                    </View>
+            movies.map((movie) => {
+              const movieId = movie._id ?? movie.id ?? '';
+              const priceLabel =
+                typeof movie.price === 'number' && movie.price > 0
+                  ? `Цена: ${movie.price} ₽`
+                  : 'Бесплатно';
+
+              return (
+                <TouchableOpacity
+                  key={movieId || movie.title}
+                  style={styles.movieCard}
+                  onPress={() => movieId && router.push(`/movie/${movieId}`)}
+                  activeOpacity={0.8}
+                >
+                  <Image
+                    source={{
+                      uri: movie.previewImage || 'https://via.placeholder.com/240x360',
+                    }}
+                    style={styles.moviePoster}
+                  />
+                  <View style={styles.movieContent}>
+                    <Text style={styles.movieTitle} numberOfLines={1}>
+                      {movie.title}
+                    </Text>
+                    <Text style={styles.movieDescription} numberOfLines={2}>
+                      {movie.description}
+                    </Text>
+                    <Text style={styles.price}>{priceLabel}</Text>
                   </View>
-                  <Text style={styles.ticketSeat}>
-                    Ряд {ticket.row}, Место {ticket.seat}
-                  </Text>
-                </View>
-              </View>
-            ))
+                </TouchableOpacity>
+              );
+            })
           )}
         </View>
 
@@ -194,7 +200,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 16,
   },
-  ticketCard: {
+  movieCard: {
     backgroundColor: '#111',
     borderRadius: 12,
     marginBottom: 16,
@@ -203,39 +209,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#222',
   },
-  ticketPoster: {
-    width: 80,
-    height: 120,
+  moviePoster: {
+    width: 96,
+    height: 144,
     resizeMode: 'cover',
   },
-  ticketContent: {
+  movieContent: {
     flex: 1,
-    padding: 12,
+    padding: 14,
     justifyContent: 'space-between',
   },
-  ticketTitle: {
+  movieTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  ticketInfo: {
-    gap: 6,
-  },
-  ticketRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  ticketText: {
+  movieDescription: {
     fontSize: 13,
     color: '#999',
+    lineHeight: 18,
   },
-  ticketSeat: {
+  price: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: '#E50914',
-    marginTop: 4,
+    marginTop: 8,
   },
   logoutButton: {
     flexDirection: 'row',
