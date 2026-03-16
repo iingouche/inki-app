@@ -11,6 +11,7 @@ export interface LoginCredentials {
 }
 
 export interface RegisterCredentials {
+  name: string
   email: string;
   password: string;
   confirmPassword: string;
@@ -26,22 +27,16 @@ export interface AuthResponse {
 }
 
 export interface Movie {
-  id: string;
+  _id?: string;
+  id?: string;
   title: string;
-  genre: string;
-  rating: number;
-  poster: string;
-  year: number;
-  duration: number;
   description: string;
-  showtimes: Showtime[];
-}
-
-export interface Showtime {
-  id: string;
-  time: string;
-  hall: string;
-  available: boolean;
+  previewImage?: string | null;
+  videoUrl?: string | null;
+  price?: number;
+  isPaid?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Ticket {

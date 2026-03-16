@@ -29,7 +29,7 @@ export default function AuthScreen() {
       if (isLogin) {
         await login({ email, password });
       } else {
-        await register({ email, password, confirmPassword});
+        await register({name,  email, password, confirmPassword});
       }
       router.replace('/(tabs)');
     } catch (error: any) {

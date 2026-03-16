@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { Movie } from '@/types';
 import { moviesAPI } from '@/services/api';
-import { Film, LogOut, Mail, Star } from 'lucide-react-native';
+import { Film, LogOut, Mail } from 'lucide-react-native';
 
 export default function ProfileScreen() {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -73,6 +73,7 @@ export default function ProfileScreen() {
           <Text style={styles.name}>{user?.name}</Text>
           <View style={styles.emailContainer}>
             <Mail size={16} color="#999" strokeWidth={2} />
+            <Text>{user?.name}</Text>
             <Text style={styles.email}>{user?.email}</Text>
           </View>
         </View>
@@ -93,28 +94,38 @@ export default function ProfileScreen() {
               <Text style={styles.emptyText}>Фильмы не найдены</Text>
             </View>
           ) : (
-            movies.map((movie) => (
-              <TouchableOpacity
-                key={movie.id}
-                style={styles.movieCard}
-                onPress={() => router.push(`/movie/${movie.id}`)}
-                activeOpacity={0.8}
-              >
-                <Image source={{ uri: movie.poster }} style={styles.moviePoster} />
-                <View style={styles.movieContent}>
-                  <Text style={styles.movieTitle} numberOfLines={1}>
-                    {movie.title}
-                  </Text>
-                  <Text style={styles.movieGenre} numberOfLines={1}>
-                    {movie.genre}
-                  </Text>
-                  <View style={styles.ratingContainer}>
-                    <Star size={14} color="#FFD700" fill="#FFD700" strokeWidth={2} />
-                    <Text style={styles.rating}>{movie.rating.toFixed(1)}</Text>
+            movies.map((movie) => {
+              const movieId = movie._id ?? movie.id ?? '';
+              const priceLabel =
+                typeof movie.price === 'number' && movie.price > 0
+                  ? `Цена: ${movie.price} ₽`
+                  : 'Бесплатно';
+
+              return (
+                <TouchableOpacity
+                  key={movieId || movie.title}
+                  style={styles.movieCard}
+                  onPress={() => movieId && router.push(`/movie/${movieId}`)}
+                  activeOpacity={0.8}
+                >
+                  <Image
+                    source={{
+                      uri: movie.previewImage || 'https://via.placeholder.com/240x360',
+                    }}
+                    style={styles.moviePoster}
+                  />
+                  <View style={styles.movieContent}>
+                    <Text style={styles.movieTitle} numberOfLines={1}>
+                      {movie.title}
+                    </Text>
+                    <Text style={styles.movieDescription} numberOfLines={2}>
+                      {movie.description}
+                    </Text>
+                    <Text style={styles.price}>{priceLabel}</Text>
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))
+                </TouchableOpacity>
+              );
+            })
           )}
         </View>
 
@@ -214,19 +225,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 6,
   },
-  movieGenre: {
+  movieDescription: {
     fontSize: 13,
     color: '#999',
+    lineHeight: 18,
   },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  rating: {
+  price: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#FFD700',
+    color: '#E50914',
+    marginTop: 8,
   },
   logoutButton: {
     flexDirection: 'row',

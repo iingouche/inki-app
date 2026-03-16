@@ -9,7 +9,7 @@ import {
   LoginCredentials,
   RegisterCredentials,
 } from '@/types';
-import { MOCK_USER, MOCK_MOVIES, MOCK_TICKETS } from '@/data/mockData';
+import { MOCK_USER, MOCK_TICKETS } from '@/data/mockData';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL || process.env.HOST || '';
@@ -71,6 +71,7 @@ export const authAPI = {
       const response = await api.post(`/auth/register`, {
         email: credentials.email,
         password: credentials.password,
+        name: credentials.name
       });
 
       if (response.data.token) {
@@ -127,11 +128,11 @@ export const moviesAPI = {
   getNowPlaying: async (): Promise<Movie[]> => {
     try {
       // TODO: Раскомментировать для работы с реальным API
-      const response = await api.get(`/movies/now-playing`);
+      const response = await api.get(`/movies`);
       return response.data;
 
       // await new Promise((resolve) => setTimeout(resolve, 800));
-      // return MOCK_MOVIES;
+      // return [];
     } catch (error) {
       throw error;
     }
@@ -144,7 +145,7 @@ export const moviesAPI = {
       return response.data;
 
       // await new Promise((resolve) => setTimeout(resolve, 600));
-      // const movie = MOCK_MOVIES.find((m) => m.id === id);
+      // const movie = null;
       // if (!movie) {
       //   throw new Error('Фильм не найден');
       // }
