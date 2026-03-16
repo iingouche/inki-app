@@ -5,6 +5,26 @@ export interface User {
   avatar?: string;
 }
 
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterCredentials {
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    role: string;
+  };
+}
+
 export interface Movie {
   id: string;
   title: string;
@@ -32,19 +52,4 @@ export interface Ticket {
   row: number;
   seat: number;
   poster: string;
-}
-
-export interface AuthResponse {
-  token: string;
-  user: User;
-}
-
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface RegisterCredentials extends LoginCredentials {
-  confirmPassword: string;
-  name: string;
 }

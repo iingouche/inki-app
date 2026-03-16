@@ -59,7 +59,7 @@ export default function HomeScreen() {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#E50914" />
-        <Text style={styles.loadingText}>Загрузка фильмов...</Text>
+        <Text style={styles.loadingText}>Загрузка ваших фильмов...</Text>
       </View>
     );
   }
@@ -67,9 +67,9 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Сегодня в кино</Text>
+        <Text style={styles.headerTitle}>Все фильмы</Text>
         <Text style={styles.headerSubtitle}>
-          {movies.length} {movies.length === 1 ? 'фильм' : 'фильмов'}
+          {movies.length} {movies.length === 1 ? 'фильм' : 'фильмов'} в вашей коллекции
         </Text>
       </View>
 

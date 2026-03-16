@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -39,6 +40,15 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Вы уверены, что хотите выйти?');
+      if (confirmed) {
+        logout();
+        router.replace('/auth');
+      }
+      return;
+    }
+
     Alert.alert('Выход', 'Вы уверены, что хотите выйти?', [
       { text: 'Отмена', style: 'cancel' },
       {

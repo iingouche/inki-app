@@ -29,7 +29,7 @@ export default function AuthScreen() {
       if (isLogin) {
         await login({ email, password });
       } else {
-        await register({ email, password, confirmPassword, name });
+        await register({ email, password, confirmPassword});
       }
       router.replace('/(tabs)');
     } catch (error: any) {
@@ -56,7 +56,7 @@ export default function AuthScreen() {
       >
         <View style={styles.header}>
           <Film size={60} color="#E50914" strokeWidth={2} />
-          <Text style={styles.title}>CinemaApp</Text>
+          <Text style={styles.title}>INKI</Text>
           <Text style={styles.subtitle}>
             {isLogin ? 'Добро пожаловать!' : 'Создайте аккаунт'}
           </Text>
