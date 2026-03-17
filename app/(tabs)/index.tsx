@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Movie } from '@/types';
 import { moviesAPI } from '@/services/api';
+import { Film } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -78,9 +79,11 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <Film size={60} color="#E50914" strokeWidth={2} />
+        <Text style={styles.title}>INKI</Text>
         <Text style={styles.headerTitle}>Все фильмы</Text>
         <Text style={styles.headerSubtitle}>
-          {movies.length} {movies.length === 1 ? 'фильм' : 'фильмов'} в вашей коллекции
+          {movies.length} {movies.length === 1 ? 'фильм' : 'фильмов'} в коллекции
         </Text>
       </View>
 
@@ -98,13 +101,13 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#fff',
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: '#fff',
   },
   loadingText: {
     color: '#999',
@@ -116,6 +119,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#222',
+    backgroundColor: '#000',
   },
   headerTitle: {
     fontSize: 28,

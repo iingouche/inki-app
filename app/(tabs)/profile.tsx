@@ -64,7 +64,10 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.header}>
           <Image
             source={{ uri: user?.avatar || 'https://via.placeholder.com/200' }}
@@ -78,7 +81,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
+        {/* <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Film size={24} color="#E50914" strokeWidth={2} />
             <Text style={styles.sectionTitle}>Фильмы</Text>
@@ -127,13 +130,15 @@ export default function ProfileScreen() {
               );
             })
           )}
-        </View>
+        </View> */}
 
+      </ScrollView>
+      <View style={styles.footer}>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <LogOut size={20} color="#fff" strokeWidth={2} />
           <Text style={styles.logoutText}>Выйти</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -142,6 +147,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   header: {
     alignItems: 'center',
@@ -241,11 +249,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#E50914',
-    margin: 20,
-    marginTop: 0,
+    margin: 0,
     padding: 16,
     borderRadius: 12,
     gap: 10,
+  },
+  footer: {
+    padding: 20,
+    paddingTop: 0,
+    backgroundColor: '#000',
   },
   logoutText: {
     color: '#fff',

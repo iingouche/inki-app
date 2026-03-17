@@ -16,7 +16,7 @@ import { moviesAPI } from '@/services/api';
 import {
   ArrowLeft,
 } from 'lucide-react-native';
-import { Linking } from 'react-native';
+import Video from 'react-native-video';
 
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,19 +40,6 @@ export default function MovieDetailScreen() {
       Alert.alert('Ошибка', 'Не удалось загрузить информацию о фильме');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleOpenVideo = async () => {
-    if (!movie?.videoUrl) {
-      Alert.alert('Видео недоступно', 'Ссылка на видео отсутствует');
-      return;
-    }
-
-    try {
-      await Linking.openURL(movie.videoUrl);
-    } catch (error) {
-      Alert.alert('Ошибка', 'Не удалось открыть видео');
     }
   };
 
@@ -117,23 +104,20 @@ export default function MovieDetailScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Видео</Text>
-            <TouchableOpacity
-              style={[
-                styles.videoButton,
-                !movie.videoUrl && styles.videoButtonDisabled,
-              ]}
-              onPress={handleOpenVideo}
-              disabled={!movie.videoUrl}
-            >
-              <Text
-                style={[
-                  styles.videoButtonText,
-                  !movie.videoUrl && styles.videoButtonTextDisabled,
-                ]}
-              >
-                {movie.videoUrl ? 'Открыть видео' : 'Видео не загружено'}
-              </Text>
-            </TouchableOpacity>
+            {movie.videoUrl ? (
+              <View style={styles.videoWrapper}>
+                <Video
+                  source={{ uri: movie.videoUrl }}
+                  controls
+                  resizeMode="contain"
+                  style={styles.video}
+                />
+              </View>
+            ) : (
+              <View style={styles.videoEmpty}>
+                <Text style={styles.videoEmptyText}>Видео не загружено</Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -225,23 +209,28 @@ const styles = StyleSheet.create({
     color: '#ccc',
     lineHeight: 24,
   },
-  videoButton: {
-    flexDirection: 'row',
+  videoWrapper: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: '#111',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  video: {
+    width: '100%',
+    height: '100%',
+  },
+  videoEmpty: {
+    width: '100%',
+    paddingVertical: 18,
+    borderRadius: 10,
+    backgroundColor: '#111',
     alignItems: 'center',
-    backgroundColor: '#E50914',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    justifyContent: 'center',
   },
-  videoButtonDisabled: {
-    backgroundColor: '#333',
-  },
-  videoButtonText: {
-    color: '#fff',
+  videoEmptyText: {
+    color: '#777',
     fontSize: 14,
-    fontWeight: 'bold',
-  },
-  videoButtonTextDisabled: {
-    color: '#666',
+    fontWeight: '600',
   },
 });
