@@ -123,6 +123,35 @@ axios.interceptors.response.use(
   }
 );
 
+type UploadAsset = {
+  uri: string;
+  name?: string;
+  mimeType?: string;
+  file?: any;
+};
+
+type CreateMoviePayload = {
+  title: string;
+  description: string;
+  price?: number | string;
+  poster?: UploadAsset | null;
+  movie?: UploadAsset | null;
+};
+
+const appendFormFile = (
+  formData: FormData,
+  fieldName: string,
+  asset: UploadAsset
+) => {
+  if (asset.file) {
+    formData.append(fieldName, asset.file as any);
+    return;
+  }
+
+  const name = asset.name || `${fieldName}-${Date.now()}`;
+  const type = asset.mimeType || 'application/octet-stream';
+  formData.append(fieldName, { uri: asset.uri, name, type } as any);
+};
 
 export const moviesAPI = {
   getNowPlaying: async (): Promise<Movie[]> => {
@@ -150,6 +179,33 @@ export const moviesAPI = {
       //   throw new Error('Фильм не найден');
       // }
       // return movie;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  createMovie: async (payload: CreateMoviePayload): Promise<Movie> => {
+    try {
+      const formData = new FormData();
+      formData.append('title', payload.title);
+      formData.append('description', payload.description);
+      if (payload.price !== undefined && payload.price !== null) {
+        formData.append('price', String(payload.price));
+      }
+      if (payload.poster) {
+        appendFormFile(formData, 'poster', payload.poster);
+      }
+      if (payload.movie) {
+        appendFormFile(formData, 'movie', payload.movie);
+      }
+
+      const response = await api.post(`/movies`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+      });
+      return response.data.movie ?? response.data;
     } catch (error) {
       throw error;
     }
