@@ -10,16 +10,26 @@ import {
   ScrollView,
   Alert,
   Platform,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { Movie } from '@/types';
 import { moviesAPI } from '@/services/api';
+import * as DocumentPicker from 'expo-document-picker';
 import { Film, LogOut, Mail } from 'lucide-react-native';
 
 export default function ProfileScreen() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [poster, setPoster] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [movieFile, setMovieFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { user, logout } = useAuth();
   const router = useRouter();
 
@@ -74,6 +84,15 @@ export default function ProfileScreen() {
             style={styles.avatar}
           />
           <Text style={styles.name}>{user?.name}</Text>
+          {user?.role === 'admin' ? (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Film size={16} color="#fff" strokeWidth={2} />
+              <Text style={styles.addButtonText}>Добавить фильм</Text>
+            </TouchableOpacity>
+          ) : null}
           <View style={styles.emailContainer}>
             <Mail size={16} color="#999" strokeWidth={2} />
             <Text>{user?.name}</Text>
@@ -81,56 +100,158 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Film size={24} color="#E50914" strokeWidth={2} />
-            <Text style={styles.sectionTitle}>Фильмы</Text>
-          </View>
+        <Modal
+          visible={showAddModal}
+          animationType="slide"
+          onRequestClose={() => setShowAddModal(false)}
+        >
+          <SafeAreaView style={styles.container}>
+            <ScrollView contentContainerStyle={styles.content}>
+              <Text style={styles.title}>Добавить фильм</Text>
 
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#E50914" />
-            </View>
-          ) : movies.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Film size={48} color="#666" strokeWidth={2} />
-              <Text style={styles.emptyText}>Фильмы не найдены</Text>
-            </View>
-          ) : (
-            movies.map((movie) => {
-              const movieId = movie._id ?? movie.id ?? '';
-              const priceLabel =
-                typeof movie.price === 'number' && movie.price > 0
-                  ? `Цена: ${movie.price} ₽`
-                  : 'Бесплатно';
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Название</Text>
+                <TextInput
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="Введите название"
+                  placeholderTextColor="#666"
+                  style={styles.input}
+                />
+              </View>
 
-              return (
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Описание</Text>
+                <TextInput
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder="Короткое описание"
+                  placeholderTextColor="#666"
+                  style={[styles.input, styles.textArea]}
+                  multiline
+                />
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Цена (₽)</Text>
+                <TextInput
+                  value={price}
+                  onChangeText={setPrice}
+                  placeholder="0"
+                  placeholderTextColor="#666"
+                  keyboardType="numeric"
+                  style={styles.input}
+                />
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Постер</Text>
                 <TouchableOpacity
-                  key={movieId || movie.title}
-                  style={styles.movieCard}
-                  onPress={() => movieId && router.push(`/movie/${movieId}`)}
-                  activeOpacity={0.8}
+                  style={styles.fileButton}
+                  onPress={async () => {
+                    const result = await DocumentPicker.getDocumentAsync({
+                      type: ['image/*'],
+                      multiple: false,
+                      copyToCacheDirectory: true,
+                    });
+                    if (!result.canceled && result.assets?.length) {
+                      setPoster(result.assets[0]);
+                    }
+                  }}
                 >
-                  <Image
-                    source={{
-                      uri: movie.previewImage || 'https://via.placeholder.com/240x360',
-                    }}
-                    style={styles.moviePoster}
-                  />
-                  <View style={styles.movieContent}>
-                    <Text style={styles.movieTitle} numberOfLines={1}>
-                      {movie.title}
-                    </Text>
-                    <Text style={styles.movieDescription} numberOfLines={2}>
-                      {movie.description}
-                    </Text>
-                    <Text style={styles.price}>{priceLabel}</Text>
-                  </View>
+                  <Text style={styles.fileButtonText}>{poster?.name || 'Выбрать файл'}</Text>
                 </TouchableOpacity>
-              );
-            })
-          )}
-        </View> */}
+                {poster ? (
+                  <Image
+                    source={{ uri: poster.uri }}
+                    style={styles.posterPreview}
+                  />
+                ) : null}
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Фильм</Text>
+                <TouchableOpacity
+                  style={styles.fileButton}
+                  onPress={async () => {
+                    const result = await DocumentPicker.getDocumentAsync({
+                      type: ['video/*'],
+                      multiple: false,
+                      copyToCacheDirectory: true,
+                    });
+                    if (!result.canceled && result.assets?.length) {
+                      setMovieFile(result.assets[0]);
+                    }
+                  }}
+                >
+                  <Text style={styles.fileButtonText}>{movieFile?.name || 'Выбрать файл'}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.primaryButton, isSubmitting && styles.disabledButton]}
+                onPress={async () => {
+                  if (!title.trim() || !description.trim()) {
+                    Alert.alert('Ошибка', 'Укажите название и описание фильма');
+                    return;
+                  }
+                  try {
+                    setIsSubmitting(true);
+                    await moviesAPI.createMovie({
+                      title: title.trim(),
+                      description: description.trim(),
+                      price: price ? Number(price) : 0,
+                      poster: poster
+                        ? {
+                            uri: poster.uri,
+                            name: poster.name,
+                            mimeType: poster.mimeType,
+                            file: (poster as any).file,
+                          }
+                        : null,
+                      movie: movieFile
+                        ? {
+                            uri: movieFile.uri,
+                            name: movieFile.name,
+                            mimeType: movieFile.mimeType,
+                            file: (movieFile as any).file,
+                          }
+                        : null,
+                    });
+
+                    setTitle('');
+                    setDescription('');
+                    setPrice('');
+                    setPoster(null);
+                    setMovieFile(null);
+                    setShowAddModal(false);
+
+                    Alert.alert('Готово', 'Фильм успешно добавлен');
+                  } catch (error) {
+                    console.error('Ошибка добавления фильма:', error);
+                    Alert.alert('Ошибка', 'Не удалось добавить фильм');
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Добавить фильм</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.primaryButton, { backgroundColor: '#222', marginTop: 8 }]}
+                onPress={() => setShowAddModal(false)}
+              >
+                <Text style={styles.primaryButtonText}>Отмена</Text>
+              </TouchableOpacity>
+
+              {Platform.OS === 'web' ? (
+                <Text style={styles.helper}>Для загрузки больших файлов лучше использовать стабильное подключение.</Text>
+              ) : null}
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
 
       </ScrollView>
       <View style={styles.footer}>
@@ -263,5 +384,90 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  addButton: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#E50914',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  content: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 16,
+  },
+  fieldGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    color: '#fff',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#111',
+    borderColor: '#222',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    color: '#fff',
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  fileButton: {
+    backgroundColor: '#141414',
+    borderColor: '#333',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  fileButtonText: {
+    color: '#E50914',
+    fontWeight: '600',
+  },
+  posterPreview: {
+    width: 120,
+    height: 180,
+    resizeMode: 'cover',
+    borderRadius: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#222',
+  },
+  primaryButton: {
+    marginTop: 12,
+    backgroundColor: '#E50914',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  helper: {
+    marginTop: 16,
+    color: '#777',
+    fontSize: 12,
+    textAlign: 'center',
   },
 });

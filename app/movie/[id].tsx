@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Movie } from '@/types';
-import { moviesAPI } from '@/services/api';
+import { API_BASE_URL, moviesAPI } from '@/services/api';
 import {
   ArrowLeft,
 } from 'lucide-react-native';
@@ -22,6 +22,7 @@ export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -60,16 +61,13 @@ export default function MovieDetailScreen() {
     );
   }
 
+  const movieId = movie._id ?? movie.id ?? '';
+  const streamUrl = movieId ? `${API_BASE_URL}/movies/${movieId}/video` : null;
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.imageContainer}>
-          <Image
-            source={{
-              uri: movie.previewImage || 'https://via.placeholder.com/600x900',
-            }}
-            style={styles.poster}
-          />
+        <View style={styles.headerRow}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
@@ -82,13 +80,7 @@ export default function MovieDetailScreen() {
           <Text style={styles.title}>{movie.title}</Text>
 
           <View style={styles.metaContainer}>
-            <View style={styles.metaItem}>
-              <Text style={styles.metaText}>
-                {typeof movie.price === 'number' && movie.price > 0
-                  ? `Цена: ${movie.price} ₽`
-                  : 'Бесплатно'}
-              </Text>
-            </View>
+            <View style={styles.metaItem} />
             <View style={styles.separator} />
             <View style={styles.metaItem}>
               <Text style={styles.metaText}>
@@ -105,14 +97,26 @@ export default function MovieDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Видео</Text>
             {movie.videoUrl ? (
-              <View style={styles.videoWrapper}>
+              <TouchableOpacity
+                activeOpacity={0.9}
+                style={styles.videoWrapper}
+                onPress={() => setIsPlaying(true)}
+              >
                 <Video
-                  source={{ uri: movie.videoUrl }}
+                  source={{ uri: streamUrl || movie.videoUrl }}
                   controls
+                  paused={!isPlaying}
                   resizeMode="contain"
                   style={styles.video}
                 />
-              </View>
+                {!isPlaying && (
+                  <View style={styles.playOverlay}>
+                    <View style={styles.playButton}>
+                      <Text style={styles.playText}>Play</Text>
+                    </View>
+                  </View>
+                )}
+              </TouchableOpacity>
             ) : (
               <View style={styles.videoEmpty}>
                 <Text style={styles.videoEmptyText}>Видео не загружено</Text>
@@ -147,23 +151,22 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     position: 'relative',
-    height: 500,
+    height: 0,
   },
-  poster: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
+  headerRow: {
+    padding: 12,
+    paddingTop: 8,
+    backgroundColor: '#000',
   },
+  poster: {},
   backButton: {
-    position: 'absolute',
-    top: 10,
-    left: 16,
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 2,
   },
   content: {
     padding: 20,
@@ -219,6 +222,29 @@ const styles = StyleSheet.create({
   video: {
     width: '100%',
     height: '100%',
+  },
+  playOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
+  playButton: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
+  playText: {
+    color: '#fff',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   videoEmpty: {
     width: '100%',

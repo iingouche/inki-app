@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Movie } from '@/types';
-import { moviesAPI } from '@/services/api';
+import { API_BASE_URL, moviesAPI } from '@/services/api';
 import { Film } from 'lucide-react-native';
 
 export default function HomeScreen() {
@@ -37,11 +37,6 @@ export default function HomeScreen() {
 
   const renderMovieCard = ({ item }: { item: Movie }) => {
     const movieId = item._id ?? item.id ?? '';
-    const priceLabel =
-      typeof item.price === 'number' && item.price > 0
-        ? `Цена: ${item.price} ₽`
-        : 'Бесплатно';
-
     return (
     <TouchableOpacity
       style={styles.card}
@@ -50,7 +45,9 @@ export default function HomeScreen() {
     >
       <Image
         source={{
-          uri: item.previewImage || 'https://via.placeholder.com/300x450',
+          uri: item._id
+            ? `${API_BASE_URL}/movies/${item._id}/preview`
+            : item.previewImage || 'https://via.placeholder.com/300x450',
         }}
         style={styles.poster}
       />
@@ -61,7 +58,6 @@ export default function HomeScreen() {
         <Text style={styles.description} numberOfLines={2}>
           {item.description}
         </Text>
-        <Text style={styles.price}>{priceLabel}</Text>
       </View>
     </TouchableOpacity>
     );

@@ -11,15 +11,32 @@ import {
 } from '@/types';
 import { MOCK_USER, MOCK_TICKETS } from '@/data/mockData';
 
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL || process.env.HOST || '';
+const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, '');
+
+const resolveBaseUrl = () => {
+  const envUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  if (envUrl) {
+    return normalizeBaseUrl(envUrl);
+  }
+
+  const host = process.env.HOST?.trim();
+  if (host) {
+    const withProtocol = host.startsWith('http') ? host : `http://${host}`;
+    return `${normalizeBaseUrl(withProtocol)}/api`;
+  }
+
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:5000/api';
+  }
+
+  return 'http://localhost:5000/api';
+};
+
+export const API_BASE_URL = resolveBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 let authToken: string | null = null;
@@ -108,7 +125,7 @@ export const authAPI = {
   }
 };
 
-axios.interceptors.response.use(
+api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
@@ -201,7 +218,6 @@ export const moviesAPI = {
 
       const response = await api.post(`/movies`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
       });
