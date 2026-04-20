@@ -33,7 +33,9 @@ export default function AuthScreen() {
       }
       router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Ошибка', error.message || 'Что-то пошло не так');
+      const serverMessage = error?.response?.data?.message;
+      const clientMessage = error?.message;
+      Alert.alert('Ошибка', serverMessage || clientMessage || 'Что-то пошло не так');
     }
   };
 

@@ -13,16 +13,33 @@ import { MOCK_USER, MOCK_TICKETS } from '@/data/mockData';
 
 const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, '');
 
+const ensureApiSuffix = (value: string) => {
+  const normalized = normalizeBaseUrl(value);
+
+  try {
+    const parsed = new URL(normalized);
+    if (!/\/api$/i.test(parsed.pathname)) {
+      parsed.pathname = `${normalizeBaseUrl(parsed.pathname || '')}/api`;
+    }
+    return normalizeBaseUrl(parsed.toString());
+  } catch {
+    if (/\/api$/i.test(normalized)) {
+      return normalized;
+    }
+    return `${normalized}/api`;
+  }
+};
+
 const resolveBaseUrl = () => {
   const envUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
   if (envUrl) {
-    return normalizeBaseUrl(envUrl);
+    return ensureApiSuffix(envUrl);
   }
 
   const host = process.env.HOST?.trim();
   if (host) {
     const withProtocol = host.startsWith('http') ? host : `http://${host}`;
-    return `${normalizeBaseUrl(withProtocol)}/api`;
+    return ensureApiSuffix(withProtocol);
   }
 
   if (Platform.OS === 'android') {
