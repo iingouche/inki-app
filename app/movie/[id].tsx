@@ -2,21 +2,20 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Movie } from '@/types';
 import { API_BASE_URL, moviesAPI } from '@/services/api';
 import {
   ArrowLeft,
 } from 'lucide-react-native';
-import Video from 'react-native-video';
+import { VideoView, useVideoPlayer } from 'expo-video';
 
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,12 +23,27 @@ export default function MovieDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const router = useRouter();
+  const movieId = typeof id === 'string' ? id : '';
+  const streamUrl = movieId ? `${API_BASE_URL}/movies/${movieId}/video` : null;
+  const player = useVideoPlayer(streamUrl, (videoPlayer) => {
+    videoPlayer.loop = false;
+  });
 
   useEffect(() => {
     if (id) {
       loadMovie(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    const subscription = player.addListener('statusChange', ({ status, error }) => {
+      if (status === 'error') {
+        Alert.alert('Ошибка видео', error?.message || 'Не удалось воспроизвести видео');
+      }
+    });
+
+    return () => subscription.remove();
+  }, [player]);
 
   const loadMovie = async (movieId: string) => {
     try {
@@ -60,9 +74,6 @@ export default function MovieDetailScreen() {
       </View>
     );
   }
-
-  const movieId = movie._id ?? movie.id ?? '';
-  const streamUrl = movieId ? `${API_BASE_URL}/movies/${movieId}/video` : null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -96,17 +107,19 @@ export default function MovieDetailScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Видео</Text>
-            {movie.videoUrl ? (
+            {movie.videoUrl && streamUrl ? (
               <TouchableOpacity
                 activeOpacity={0.9}
                 style={styles.videoWrapper}
-                onPress={() => setIsPlaying(true)}
+                onPress={() => {
+                  setIsPlaying(true);
+                  player.play();
+                }}
               >
-                <Video
-                  source={{ uri: streamUrl || movie.videoUrl }}
-                  controls
-                  paused={!isPlaying}
-                  resizeMode="contain"
+                <VideoView
+                  player={player}
+                  nativeControls
+                  contentFit="contain"
                   style={styles.video}
                 />
                 {!isPlaying && (

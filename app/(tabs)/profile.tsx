@@ -6,19 +6,26 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   Alert,
   Platform,
   Modal,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { Movie } from '@/types';
 import { moviesAPI } from '@/services/api';
 import * as DocumentPicker from 'expo-document-picker';
 import { Film, LogOut, Mail } from 'lucide-react-native';
+
+const MB = 1024 * 1024;
+const MAX_POSTER_MB = 10;
+const MAX_MOVIE_MB = 250;
+
+const bytesToMb = (bytes?: number) =>
+  typeof bytes === 'number' ? (bytes / MB).toFixed(1) : null;
 
 export default function ProfileScreen() {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -70,6 +77,27 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  };
+
+  const validateAssetSize = (
+    asset: DocumentPicker.DocumentPickerAsset,
+    maxMb: number,
+    label: string
+  ) => {
+    if (typeof asset.size !== 'number') {
+      return true;
+    }
+
+    if (asset.size > maxMb * MB) {
+      const currentSizeMb = bytesToMb(asset.size);
+      Alert.alert(
+        'Файл слишком большой',
+        `${label} (${currentSizeMb} MB) превышает лимит ${maxMb} MB. Выберите файл меньше.`
+      );
+      return false;
+    }
+
+    return true;
   };
 
   return (
@@ -155,7 +183,11 @@ export default function ProfileScreen() {
                       copyToCacheDirectory: true,
                     });
                     if (!result.canceled && result.assets?.length) {
-                      setPoster(result.assets[0]);
+                      const selected = result.assets[0];
+                      if (!validateAssetSize(selected, MAX_POSTER_MB, 'Постер')) {
+                        return;
+                      }
+                      setPoster(selected);
                     }
                   }}
                 >
@@ -180,7 +212,11 @@ export default function ProfileScreen() {
                       copyToCacheDirectory: true,
                     });
                     if (!result.canceled && result.assets?.length) {
-                      setMovieFile(result.assets[0]);
+                      const selected = result.assets[0];
+                      if (!validateAssetSize(selected, MAX_MOVIE_MB, 'Видео')) {
+                        return;
+                      }
+                      setMovieFile(selected);
                     }
                   }}
                 >
@@ -227,9 +263,23 @@ export default function ProfileScreen() {
                     setShowAddModal(false);
 
                     Alert.alert('Готово', 'Фильм успешно добавлен');
-                  } catch (error) {
+                  } catch (error: any) {
                     console.error('Ошибка добавления фильма:', error);
-                    Alert.alert('Ошибка', 'Не удалось добавить фильм');
+                    const status = error?.response?.status;
+                    const serverMessage = error?.response?.data?.message;
+                    const fallbackMessage = error?.message;
+
+                    if (status === 413) {
+                      Alert.alert(
+                        'Ошибка 413',
+                        'Файл слишком большой для текущего лимита сервера или туннеля. Попробуйте уменьшить размер видео.'
+                      );
+                    } else {
+                      Alert.alert(
+                        'Ошибка',
+                        serverMessage || fallbackMessage || 'Не удалось добавить фильм'
+                      );
+                    }
                   } finally {
                     setIsSubmitting(false);
                   }

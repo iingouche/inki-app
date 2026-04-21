@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Movie } from '@/types';
 import { API_BASE_URL, moviesAPI } from '@/services/api';
@@ -37,6 +37,9 @@ export default function HomeScreen() {
 
   const renderMovieCard = ({ item }: { item: Movie }) => {
     const movieId = item._id ?? item.id ?? '';
+    console.log(item._id
+            ? `${API_BASE_URL}/movies/${item._id}/preview`
+            : item.previewImage || 'https://via.placeholder.com/300x450');
     return (
     <TouchableOpacity
       style={styles.card}
