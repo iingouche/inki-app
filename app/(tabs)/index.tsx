@@ -83,7 +83,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#000' }]}> 
       <View style={styles.header}>
         <Film size={60} color="#E50914" strokeWidth={2} />
         <Text style={styles.title}>INKI</Text>
@@ -107,7 +107,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#000',
   },
   centerContainer: {
     flex: 1,
