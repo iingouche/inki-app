@@ -17,6 +17,7 @@ import { Film } from 'lucide-react-native';
 export default function HomeScreen() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [failedPreviewIds, setFailedPreviewIds] = useState<Record<string, boolean>>({});
   const router = useRouter();
 
   useEffect(() => {
@@ -37,9 +38,12 @@ export default function HomeScreen() {
 
   const renderMovieCard = ({ item }: { item: Movie }) => {
     const movieId = item._id ?? item.id ?? '';
-    console.log(item._id
-            ? `${API_BASE_URL}/movies/${item._id}/preview`
-            : item.previewImage || 'https://via.placeholder.com/300x450');
+    const fallbackPreview = item.previewImage || 'https://via.placeholder.com/300x450';
+    const canUsePreviewEndpoint = Boolean(movieId) && !failedPreviewIds[movieId];
+    const posterUri = canUsePreviewEndpoint
+      ? `${API_BASE_URL}/movies/${movieId}/preview`
+      : fallbackPreview;
+
     return (
     <TouchableOpacity
       style={styles.card}
@@ -48,11 +52,14 @@ export default function HomeScreen() {
     >
       <Image
         source={{
-          uri: item._id
-            ? `${API_BASE_URL}/movies/${item._id}/preview`
-            : item.previewImage || 'https://via.placeholder.com/300x450',
+          uri: posterUri,
         }}
         style={styles.poster}
+        onError={() => {
+          if (movieId) {
+            setFailedPreviewIds((prev) => ({ ...prev, [movieId]: true }));
+          }
+        }}
       />
       <View style={styles.cardContent}>
         <Text style={styles.title} numberOfLines={1}>
